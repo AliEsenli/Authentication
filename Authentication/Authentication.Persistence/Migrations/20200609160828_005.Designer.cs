@@ -4,14 +4,16 @@ using Authentication.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Authentication.Persistence.Migrations
 {
     [DbContext(typeof(AuthenticationContext))]
-    partial class AuthenticationContextModelSnapshot : ModelSnapshot
+    [Migration("20200609160828_005")]
+    partial class _005
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -158,7 +160,7 @@ namespace Authentication.Persistence.Migrations
                     b.Property<string>("ActionName")
                         .IsRequired()
                         .HasColumnName("ActionName")
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(20)");
 
                     b.Property<long>("ApplicationId")
                         .HasColumnType("bigint");

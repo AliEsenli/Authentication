@@ -11,7 +11,8 @@ namespace Authentication.Domain.Dto.Role
         [DataMember]
         public string RoleDescription { get; set; }
         [DataMember]
-        public long GroupId { get; set; }
+        public long ApplicationId { get; set; }
+
 
     }
 }

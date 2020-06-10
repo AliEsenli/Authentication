@@ -38,7 +38,8 @@ namespace Authentication.Infrastructure.Middleware
                     var body = await reader.ReadToEndAsync();
                     var ControllerRoute = path.Remove(path.IndexOf('/'), path.LastIndexOf('/') + 1);
                     RequestDTOBase request = Newtonsoft.Json.JsonConvert.DeserializeObject<RequestDTOBase>(body);
-                    if (request == null || request.RequestInfo == null || request.RequestInfo.ApplicationId < 1 || String.IsNullOrEmpty(request.RequestInfo.ClientCode) || String.IsNullOrEmpty(request.RequestInfo.ClientPassword))
+
+                    if (request == null || request.RequestInfo == null || (request.RequestInfo.ApplicationId < 1  && ControllerRoute!= "InsertApplicationAsync")  || String.IsNullOrEmpty(request.RequestInfo.ClientCode) || String.IsNullOrEmpty(request.RequestInfo.ClientPassword) )
                         throw new BusinessException(ResponseCode.ApplicationNotAuthorized);
 
                     if (!String.IsNullOrEmpty(request.RequestInfo.ClientCode) && request.RequestInfo.ApplicationId > 0)
@@ -61,29 +62,27 @@ namespace Authentication.Infrastructure.Middleware
                         if (!String.IsNullOrEmpty(request.RequestInfo.ClientPassword) && !String.IsNullOrEmpty(user.PasswordSalt) && HashHelper.GetDecryptedString(user.Password, user.PasswordSalt) != request.RequestInfo.ClientPassword)
                             throw new BusinessException(ResponseCode.ApplicationNotAuthorized);
 
+                    }
+                    else if (ControllerRoute != "InsertApplicationAsync")
+                        throw new BusinessException(ResponseCode.ApplicationNotAuthorized);
 
-                        if (!String.IsNullOrEmpty(context.Request.Headers["Authorization"]))
-                        {
-                            var accesstoken = context.Request.Headers["Authorization"].ToString().Remove(0, 7);
-                            var handler = new JwtSecurityTokenHandler();
-                            var tokenreaded = handler.ReadJwtToken(accesstoken);
-                            var userid = Convert.ToInt64(tokenreaded.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value);
-                            var userName = tokenreaded.Claims.First(x => x.Type == ClaimTypes.Name).Value;
+                    if (!String.IsNullOrEmpty(context.Request.Headers["Authorization"]))
+                    {
+                        var accesstoken = context.Request.Headers["Authorization"].ToString().Remove(0, 7);
+                        var handler = new JwtSecurityTokenHandler();
+                        var tokenreaded = handler.ReadJwtToken(accesstoken);
+                        var userid = Convert.ToInt64(tokenreaded.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value);
+                        var userName = tokenreaded.Claims.First(x => x.Type == ClaimTypes.Name).Value;
+                        var userPermission = uow.UserRole.HasPermission(userid, ControllerRoute);
 
-                    
-                            var userPermission = uow.UserRole.HasPermission(userid, ControllerRoute);
+                        if (!userPermission)
+                            throw new BusinessException(ResponseCode.PermissionNotFound);
 
-                            if (!userPermission)
-                                throw new BusinessException(ResponseCode.PermissionNotFound);
-
-                            UserManager.ActiveUserId = userid;
-                            UserManager.ActiveUserName = userName;
-
-                        }
+                        UserManager.ActiveUserId = userid;
+                        UserManager.ActiveUserName = userName;
 
                     }
-                    else
-                        throw new BusinessException(ResponseCode.ApplicationNotAuthorized);
+                    
                     context.Request.Body.Position = 0;
                 }
                 await next(context);

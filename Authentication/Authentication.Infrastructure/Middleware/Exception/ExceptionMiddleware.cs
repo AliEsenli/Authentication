@@ -4,6 +4,7 @@ using Authentication.Common.Exceptions;
 using Authentication.Common.Resources;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
+using Serilog;
 using System;
 using System.Resources;
 using System.Text;
@@ -24,22 +25,18 @@ namespace Authentication.Infrastructure.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            string message = "";
             try
             {
                 await next(context);
             }
             catch (BusinessException ex)
             {
-                await HandleAndWrapExceptionAsync(context, ex.Message, ex.ResponseCode, null, true);
+                await HandleAndWrapExceptionAsync(context, ex.Message, ex.ResponseCode, null, true,ex);
             }
             catch (Exception ex)
             {
-                if (context.Response.HasStarted)
-                {
-                    message = "An exception occurred, but response has already started!";
-                }
-                await HandleAndWrapExceptionAsync(context, ex.Message + message, "999", null, false);
+                Log.Error($"Response Code: {"999"} Response: {ex.Message} ", ex);
+                throw;
 
             }
 
@@ -64,7 +61,6 @@ namespace Authentication.Infrastructure.Middleware
 
         private async Task WriteResponseAsync(HttpContext context, string bodyJson)
         {
-
             context.Response.Headers.Add("Accept", "application/json");
             context.Response.Headers.Add("Content-Type", "application/json");
             context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
@@ -74,7 +70,7 @@ namespace Authentication.Infrastructure.Middleware
             await context.Response.Body.WriteAsync(data, 0, data.Length);
         }
 
-        private async Task HandleAndWrapExceptionAsync(HttpContext httpContext, string exceptionMessage, string responseCode, object[] parameters, bool business)
+        private async Task HandleAndWrapExceptionAsync(HttpContext httpContext, string exceptionMessage, string responseCode, object[] parameters, bool business, Exception ex)
         {
             httpContext.Response.OnStarting(_clearCacheHeadersDelegate, httpContext.Response);
             if (business)
@@ -87,6 +83,7 @@ namespace Authentication.Infrastructure.Middleware
             response.responseInfo.message = exceptionMessage;
             response.responseInfo.IsSuccess = false;
             var responseJson = Newtonsoft.Json.JsonConvert.SerializeObject(response);
+            Log.Error($"Response Code: {responseCode} Response: {responseJson} ", ex);
             await WriteResponseAsync(httpContext, responseJson);
         }
 

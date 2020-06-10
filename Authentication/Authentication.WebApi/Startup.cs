@@ -10,7 +10,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Sinks.Elasticsearch;
 using Swashbuckle.AspNetCore.Filters;
 using System;
 
@@ -28,11 +31,31 @@ namespace Authentication.WebApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
+            #region Log
+            Log.Logger = new LoggerConfiguration()
+            .Enrich.FromLogContext()
+            .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri("http://localhost:9200/"))
+            {
+                AutoRegisterTemplate = true,
+            })
+            .CreateLogger();
+            #endregion
+
+            services.AddResponseCaching(_ =>
+            {
+                _.MaximumBodySize = 100;
+                _.SizeLimit = 100;
+                _.UseCaseSensitivePaths = false;
+            });
+
             services.AddPersistence(Configuration);
             services.AddRepository();
             services.AddServices();
             services.AddTokens();
             services.AddControllers();
+
+
 
             var tokenopts = Configuration.GetSection("TokenOptions").Get<TokenOptions>();
             services.Configure<TokenOptions>(Configuration.GetSection("TokenOptions"));
@@ -86,19 +109,22 @@ namespace Authentication.WebApi
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            app.UseExceptionMiddleWare();
-            app.UseAuthorizationMiddleWare();
-            app.UseHttpsRedirection();
+            loggerFactory.AddSerilog();
+            app.UseResponseCaching();
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseExceptionMiddleWare();
+            app.UseAuthorizationMiddleWare();
+            app.UseHttpsRedirection();
+         
+          
             app.UseSwagger();
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Authentication Api"));
 

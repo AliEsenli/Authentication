@@ -66,8 +66,7 @@ namespace Authentication.Domain.Repository.Repository
             var user = base.GetInclude((x =>
                 x.UserName == username
              && x.IsDeleted == false
-             && x.Status == StatusType.Available
-             && x.UserType == userType), "UserApplications");
+             && x.Status == StatusType.Available), "UserApplications");
 
             if (user == null)
             {

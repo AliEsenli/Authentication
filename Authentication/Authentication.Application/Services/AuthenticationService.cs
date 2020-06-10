@@ -1,6 +1,9 @@
 ﻿using Authentication.Common.Constants;
+using Authentication.Common.DTO;
+using Authentication.Common.Enum;
 using Authentication.Common.Exceptions;
 using Authentication.Common.Security;
+using Authentication.Domain.Dto.Application;
 using Authentication.Domain.Dto.Permission;
 using Authentication.Domain.Dto.Role;
 using Authentication.Domain.Dto.RolePermission;
@@ -47,7 +50,7 @@ namespace Authentication.Application.Services
 
             string password = request.Password;
             var hashedpassword = HashHelper.GetEncryptedString(password);
-            User createdUser = new User(request.UserName, request.Name, request.SurName, request.Email, hashedpassword[0], hashedpassword[1]);
+            User createdUser = new User(request.UserName, request.Name, request.SurName, request.Email, hashedpassword[0], hashedpassword[1],request.UserType);
 
 
             await uow.User.InsertAsync(createdUser);
@@ -91,31 +94,39 @@ namespace Authentication.Application.Services
 
         #endregion
 
+        public async Task<InsertApplicationResponseDTO> InsertApplicationAsync(InsertApplicationRequestDTO request)
+        {
+            InsertApplicationResponseDTO response = new InsertApplicationResponseDTO();
+            Domain.Entity.Application createdUser = new Domain.Entity.Application(request.ApplicationName, request.Description);
+
+            await uow.Application.InsertAsync(createdUser);
+            await uow.CompleteAsync();
+
+            return response;
+        }
         public async Task<InsertRoleResponseDTO> InsertRoleAsync(InsertRoleRequestDTO request)
         {
             InsertRoleResponseDTO response = new InsertRoleResponseDTO();
 
-            if (request.GroupId < 1 || String.IsNullOrEmpty(request.RoleName) || String.IsNullOrEmpty(request.RoleDescription))
+            if (String.IsNullOrEmpty(request.RoleName) || String.IsNullOrEmpty(request.RoleDescription) || request.ApplicationId < 1)
             {
                 throw new BusinessException(ResponseCode.ValidataionError);
             }
 
-            var grp = await uow.Group.GetAsync(x => x.Id == request.GroupId);
+            var applicaiton = uow.Application.GetAsync(x => x.Id == request.ApplicationId);
 
-            if (grp == null)
+            if (applicaiton.Result == null)
             {
-                throw new BusinessException(ResponseCode.GroupNotFound);
+                throw new BusinessException(ResponseCode.ApplicationNotFound);
             }
 
-
-            Role createdRole = new Role(request.RoleName, request.RoleDescription, grp);
+            Role createdRole = new Role(request.RoleName, request.RoleDescription,applicaiton.Result);
 
             await uow.Role.InsertAsync(createdRole);
             await uow.CompleteAsync();
 
             return response;
         }
-
         public async Task<InsertPermissionResponseDTO> InsertPermissionAsync(InsertPermissionRequestDTO request)
         {
             InsertPermissionResponseDTO response = new InsertPermissionResponseDTO();
@@ -132,7 +143,6 @@ namespace Authentication.Application.Services
 
             return response;
         }
-
         public async Task<InsertRolePermissionResponseDTO> InsertRolePermissionAsync(InsertRolePermissionRequestDTO request)
         {
             InsertRolePermissionResponseDTO response = new InsertRolePermissionResponseDTO();
@@ -163,7 +173,6 @@ namespace Authentication.Application.Services
 
             return response;
         }
-
         public async Task<InsertRoleGroupResponseDTO> InsertRoleGroupAsync(InsertRoleGroupRequestDTO request)
         {
 
@@ -194,7 +203,6 @@ namespace Authentication.Application.Services
 
             return response;
         }
-
         public async Task<InsertUserGroupResponseDTO> InsertUserGroupAsync(InsertUserGroupRequestDTO request)
         {
 
@@ -214,7 +222,6 @@ namespace Authentication.Application.Services
 
             return response;
         }
-
         public async Task<InsertUserRoleResponseDTO> InsertUserRole(InsertUserRoleRequestDTO request)
         {
 
@@ -231,8 +238,58 @@ namespace Authentication.Application.Services
 
             return response;
         }
+        public async Task<HasPermissionResponseDTO> HasPermission(HasPermissionRequestDTO request)
+        {
+            HasPermissionResponseDTO response = new HasPermissionResponseDTO();
+
+            if (string.IsNullOrEmpty(request.ClientCode) || string.IsNullOrEmpty(request.ClientPassword) || string.IsNullOrEmpty(request.ControllerRoute) || request.ApplicationId < 1)
+            {
+                throw new BusinessException(ResponseCode.ValidataionError);
+            }
 
 
+            var app = uow.Application.GetApplicationByClientCode(request.RequestInfo.ApplicationId);
+            if (app == null)
+            { 
+                response.HasPermission = false;
+                return response;
+            }
+            var user = await uow.User.GetAsync(x => x.UserName == request.RequestInfo.ClientCode && x.UserType == UserType.Application);
+
+            if (user == null)
+            {
+                response.HasPermission = false;
+                return response;
+            }
+
+            var userApp = await uow.UserApplication.GetAsync(x => x.UserId == user.Id && x.ApplicationId == app.Id);
+
+            if (userApp == null)
+            {
+                response.HasPermission = false;
+                return response;
+            }
+
+
+            if (!String.IsNullOrEmpty(request.RequestInfo.ClientPassword) && !String.IsNullOrEmpty(user.PasswordSalt) && HashHelper.GetDecryptedString(user.Password, user.PasswordSalt) != request.RequestInfo.ClientPassword)
+            {
+                response.HasPermission = false;
+                return response;
+            }
+
+
+            var userPermission = uow.UserRole.HasPermission(user.Id, request.ControllerRoute);
+
+            if (!userPermission)
+            {
+                response.HasPermission = false;
+                return response;
+            }
+
+
+            response.HasPermission = true;
+            return response;
+        }
 
         #region Token
 

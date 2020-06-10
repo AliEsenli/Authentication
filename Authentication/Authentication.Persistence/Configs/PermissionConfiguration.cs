@@ -23,7 +23,7 @@ namespace Authentication.Persistence.Configs
 
             builder.Property(e => e.ActionName)
            .HasColumnName("ActionName")
-           .HasColumnType("varchar(20)")
+           .HasColumnType("varchar(100)")
            .IsRequired();
 
 

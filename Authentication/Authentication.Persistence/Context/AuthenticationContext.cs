@@ -28,7 +28,7 @@ namespace Authentication.Persistence.Context
                 IAudit entity = entry.Entity as IAudit;
                 if (entity != null)
                 {
-                    var identityId = 1;
+                    var identityId = UserManager.IsLoggin() ? UserManager.ActiveUserId : -1;
                     /*Thread.CurrentPrincipal.Identity.Name;*/
                     DateTime now = DateTime.UtcNow;
 

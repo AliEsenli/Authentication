@@ -37,6 +37,9 @@ namespace Authentication.Persistence.Configs
           .HasColumnType("nvarchar(400)")
           .IsRequired();
 
+
+      
+
             builder.HasMany(bc => bc.UserApplications).WithOne(x => x.User).OnDelete(DeleteBehavior.Restrict);
         }
     }

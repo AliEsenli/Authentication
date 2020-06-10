@@ -12,10 +12,7 @@ namespace Authentication.Domain.Manager
 
         public static bool IsLoggin()
         {
-
             return !string.IsNullOrWhiteSpace(ActiveUserName)? true : false;
-
-          
         }
 
 

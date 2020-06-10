@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace Authentication.Domain.Dto.User
 {
     [DataContract]
-    public class GetUserResponseDTO : ResponseDTOBase
+    public class GetUserResponseDTO 
     {
         [DataMember]
         public string UserName { get; set; }

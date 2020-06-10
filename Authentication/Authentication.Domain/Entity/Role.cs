@@ -12,9 +12,10 @@ namespace Authentication.Domain.Entity
         public virtual long CreatorUserId { get;  set; }
         
         public virtual DateTime CreationTime { get;  set; }
-        
+        public virtual long ApplicationId { get; protected set; }
         public virtual DateTime? LastModTime { get;  set; }
         public virtual long? ModifierUserId { get;  set; }
+        public virtual Application Application { get; protected set; }
         public virtual ICollection<RoleMenu> RoleMenu { get; protected set; }
         public virtual ICollection<RoleGroup> RoleGroup { get; protected set; }
         public virtual ICollection<RolePermission> RolePermissions { get; protected set; }
@@ -23,10 +24,11 @@ namespace Authentication.Domain.Entity
         public Role()
         { }
 
-        public Role(string roleName, string roleDesc, Group grp)
+        public Role(string roleName, string roleDesc, Application app)
         {
             this.RoleName = roleName;
             this.RoleDescription = roleDesc;
+            this.Application = app;
         }
         public Role RoleUpdate(string roleName, string roleDesc)
         {
