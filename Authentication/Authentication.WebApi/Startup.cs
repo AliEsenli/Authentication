@@ -16,6 +16,8 @@ using Serilog;
 using Serilog.Sinks.Elasticsearch;
 using Swashbuckle.AspNetCore.Filters;
 using System;
+using System.IO;
+using System.Reflection;
 
 namespace Authentication.WebApi
 {
@@ -100,12 +102,10 @@ namespace Authentication.WebApi
 
                 c.SwaggerDoc("v1", inf);
 
-                var xmlPath = System.AppDomain.CurrentDomain.BaseDirectory + @"Authentication.xml";
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
-
             });
-
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -123,8 +123,8 @@ namespace Authentication.WebApi
             app.UseExceptionMiddleWare();
             app.UseAuthorizationMiddleWare();
             app.UseHttpsRedirection();
-         
-          
+
+
             app.UseSwagger();
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Authentication Api"));
 
